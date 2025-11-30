@@ -1,0 +1,233 @@
+# Recipe Recommendation API - Render Deployment Guide
+
+## 📁 Project Structure
+
+```
+recipe-api/
+├── main.py              # Main FastAPI application
+├── requirements.txt     # Python dependencies
+├── render.yaml         # Render configuration
+├── recipes.csv         # Your recipe dataset (REQUIRED)
+└── README.md           # This file
+```
+
+## 🚀 Deployment Steps
+
+### Step 1: Prepare Your Files
+
+1. Create a new folder for your project
+2. Add all three files I provided:
+   - `main.py`
+   - `requirements.txt`
+   - `render.yaml`
+3. **IMPORTANT**: Add your `recipes.csv` file to this folder
+
+### Step 2: Push to GitHub
+
+```bash
+# Initialize git repository
+git init
+
+# Add all files
+git add .
+
+# Commit
+git commit -m "Initial commit - Recipe API"
+
+# Create a new repository on GitHub, then:
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git branch -M main
+git push -u origin main
+```
+
+### Step 3: Deploy on Render
+
+1. Go to [render.com](https://render.com) and sign in
+2. Click **"New +"** → **"Web Service"**
+3. Connect your GitHub repository
+4. Render will auto-detect the `render.yaml` configuration
+5. Click **"Create Web Service"**
+
+### Step 4: Wait for Deployment
+
+- First deployment takes 5-10 minutes (downloads ML models)
+- Watch the logs for "Recommender initialized successfully!"
+- Once you see "Application startup complete", your API is live!
+
+## 🌐 API Endpoints
+
+Your deployed API will be available at: `https://your-service-name.onrender.com`
+
+### 1. Get All Recipes (Use this in React!)
+```
+GET https://your-service-name.onrender.com/recipes
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "count": 50000,
+  "recipes": [
+    {
+      "name": "Chicken Curry",
+      "ingredients": "chicken, curry powder, onions...",
+      "ingredients_clean": "chicken curry powder onions..."
+    }
+  ]
+}
+```
+
+### 2. Get Recommendations
+```
+POST https://your-service-name.onrender.com/recommend
+```
+
+**Request Body:**
+```json
+{
+  "ingredients": ["chicken", "garlic", "onion"],
+  "top_n": 10,
+  "min_match": 25.0
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "count": 10,
+  "results": [
+    {
+      "rank": 1,
+      "recipe_name": "Garlic Chicken",
+      "similarity_percent": 85.5,
+      "ingredients_used": 8,
+      "total_needed": 10,
+      "match_rate": "8/10",
+      "ingredients": "chicken, garlic, onion, pepper..."
+    }
+  ]
+}
+```
+
+### 3. Health Check
+```
+GET https://your-service-name.onrender.com/health
+```
+
+## 💻 React Integration
+
+### Fetch All Recipes
+
+```javascript
+// In your React component
+useEffect(() => {
+  const fetchRecipes = async () => {
+    try {
+      const response = await fetch('https://your-service-name.onrender.com/recipes');
+      const data = await response.json();
+      setRecipes(data.recipes);
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    }
+  };
+  
+  fetchRecipes();
+}, []);
+```
+
+### Get Recommendations
+
+```javascript
+const getRecommendations = async (selectedIngredients) => {
+  try {
+    const response = await fetch('https://your-service-name.onrender.com/recommend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ingredients: selectedIngredients,
+        top_n: 10,
+        min_match: 25.0
+      })
+    });
+    
+    const data = await response.json();
+    setRecommendations(data.results);
+  } catch (error) {
+    console.error('Error getting recommendations:', error);
+  }
+};
+```
+
+## ⚠️ Important Notes
+
+### Free Tier Limitations
+- Render free tier spins down after 15 minutes of inactivity
+- First request after spin-down takes ~30-60 seconds (cold start)
+- Consider upgrading to paid tier for production
+
+### Memory Usage
+- The ML models (TF-IDF, SVD, BERT) require significant memory
+- If deployment fails with memory errors:
+  - Reduce `MAX_ROWS` in `main.py` (line 23)
+  - Or upgrade to Render Standard plan (2GB+ RAM)
+
+### CSV File Size
+- Large CSV files increase deployment time
+- Consider compressing or splitting if > 100MB
+- Free tier has 512MB RAM limit
+
+## 🔧 Troubleshooting
+
+### Deployment Fails
+- Check logs in Render dashboard
+- Ensure `recipes.csv` is in the repository
+- Verify all dependencies in `requirements.txt`
+
+### Cold Starts Take Too Long
+- Upgrade to paid plan to keep service always running
+- Or use Render's "Background Workers" for pre-warming
+
+### Out of Memory
+- Reduce dataset size: change `MAX_ROWS` to 20000 or less
+- Upgrade to Standard plan ($7/month for 2GB RAM)
+
+## 📊 Testing Your API
+
+### Using cURL
+```bash
+# Test health
+curl https://your-service-name.onrender.com/health
+
+# Get recipes
+curl https://your-service-name.onrender.com/recipes
+
+# Get recommendations
+curl -X POST https://your-service-name.onrender.com/recommend \
+  -H "Content-Type: application/json" \
+  -d '{"ingredients": ["chicken", "garlic"], "top_n": 5}'
+```
+
+### Using Postman
+1. Import the API endpoints
+2. Test each endpoint
+3. Save responses for reference
+
+## 🎉 You're Done!
+
+Your Recipe Recommendation API is now live and ready to use in your React app!
+
+**Next Steps:**
+1. Copy your Render URL
+2. Update your React app to use this URL
+3. Test the integration
+4. Deploy your React app (Vercel, Netlify, etc.)
+
+## 📝 Need Help?
+
+- Check Render logs for errors
+- Review FastAPI docs: https://fastapi.tiangolo.com
+- Test endpoints with Swagger UI: `https://your-service-name.onrender.com/docs`
